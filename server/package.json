@@ -7,8 +7,10 @@
     "dev": "tsx watch src/server.ts"
   },
   "dependencies": {
-    "@prisma/client": "4.14.0",
-    "fastify": "^4.17.0"
+    "@fastify/cors": "^8.2.1",
+    "@prisma/client": "^4.14.1",
+    "fastify": "^4.17.0",
+    "zod": "^3.21.4"
   },
   "devDependencies": {
     "@tsconfig/node18": "^2.0.1",
@@ -16,7 +18,7 @@
     "@typescript-eslint/eslint-plugin": "^5.59.6",
     "@typescript-eslint/parser": "^5.59.6",
     "eslint": "^8.40.0",
-    "prisma": "^4.14.0",
+    "prisma": "^4.14.1",
     "tsx": "^3.12.7",
     "typescript": "^5.0.4"
   }
