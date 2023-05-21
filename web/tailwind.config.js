@@ -1,4 +1,6 @@
 // @ts-check
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -12,6 +14,10 @@ module.exports = {
       alt: 'var(--font-bai-jamjuree)',
     },
     extend: {
+      backgroundImage: {
+        stripes:
+          'repeating-linear-gradient(to bottom, transparent 0 7px, rgb(255 255 255 / 0.1) 7px 8px)',
+      },
       colors: {
         gray: {
           50: '#eaeaea',
@@ -76,5 +82,9 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(({ addVariant }) => {
+      addVariant('hocus', ['&:hover', '&:focus-visible']);
+    }),
+  ],
 };
