@@ -4,8 +4,13 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
 export async function memoriesRoutes(app: FastifyInstance) {
-  app.get('/memories', async () => {
+  app.addHook('preHandler', async (req) => {
+    await req.jwtVerify();
+  });
+
+  app.get('/memories', async (req) => {
     const memories = await prisma.memory.findMany({
+      where: { userId: req.user.sub },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -17,12 +22,16 @@ export async function memoriesRoutes(app: FastifyInstance) {
     return memoriesWithExcerpt;
   });
 
-  app.get('/memories/:id', async (req) => {
+  app.get('/memories/:id', async (req, reply) => {
     const paramsSchema = z.object({ id: z.string().uuid() });
 
     const { id } = paramsSchema.parse(req.params);
 
     const memory = await prisma.memory.findUnique({ where: { id } });
+
+    if (!memory || (!memory.isPublic && memory.userId !== req.user.sub))
+      return reply.status(404).send();
+
     return memory;
   });
 
@@ -33,16 +42,15 @@ export async function memoriesRoutes(app: FastifyInstance) {
       isPublic: z.coerce.boolean().optional(),
     });
 
-    const userId = 'aee69295-62e9-4e2a-ac2d-d02236325503';
     const { content, coverUrl, isPublic } = bodySchema.parse(req.body);
 
     const createdMemory = await prisma.memory.create({
-      data: { userId, content, coverUrl, isPublic },
+      data: { userId: req.user.sub, content, coverUrl, isPublic },
     });
     return createdMemory;
   });
 
-  app.put('/memories/:id', async (req) => {
+  app.put('/memories/:id', async (req, reply) => {
     const paramsSchema = z.object({ id: z.string().uuid() });
 
     const { id } = paramsSchema.parse(req.params);
@@ -55,17 +63,27 @@ export async function memoriesRoutes(app: FastifyInstance) {
 
     const { content, coverUrl, isPublic } = bodySchema.parse(req.body);
 
-    const updatedMemory = await prisma.memory.update({
+    let memory = await prisma.memory.findUnique({ where: { id } });
+
+    if (!memory || memory.userId !== req.user.sub)
+      return reply.status(404).send();
+
+    memory = await prisma.memory.update({
       where: { id },
       data: { content, coverUrl, isPublic },
     });
-    return updatedMemory;
+    return memory;
   });
 
-  app.delete('/memories/:id', async (req) => {
+  app.delete('/memories/:id', async (req, reply) => {
     const paramsSchema = z.object({ id: z.string().uuid() });
 
     const { id } = paramsSchema.parse(req.params);
+
+    const memory = await prisma.memory.findUnique({ where: { id } });
+
+    if (!memory || memory.userId !== req.user.sub)
+      return reply.status(404).send();
 
     await prisma.memory.delete({ where: { id } });
   });
