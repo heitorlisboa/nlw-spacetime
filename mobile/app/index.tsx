@@ -1,10 +1,18 @@
 import { BaiJamjuree_700Bold } from '@expo-google-fonts/bai-jamjuree';
 import { Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
+import {
+  type DiscoveryDocument,
+  makeRedirectUri,
+  useAuthRequest,
+} from 'expo-auth-session';
+import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
+import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { styled } from 'nativewind';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   ImageBackground,
   Linking,
@@ -13,15 +21,27 @@ import {
   View,
 } from 'react-native';
 
-import bgBlur from './src/assets/bg-blur.png';
-import NlwLogo from './src/assets/nlw-spacetime-logo.svg';
-import Stripes from './src/assets/stripes.svg';
+import bgBlur from '../src/assets/bg-blur.png';
+import NlwLogo from '../src/assets/nlw-spacetime-logo.svg';
+import Stripes from '../src/assets/stripes.svg';
+import { api } from '../src/lib/api';
 
-SplashScreen.preventAutoHideAsync();
+const githubClientId = Constants.expoConfig?.extra?.githubClientId as string;
+
+// Endpoints
+const discovery: DiscoveryDocument = {
+  authorizationEndpoint: 'https://github.com/login/oauth/authorize',
+  tokenEndpoint: 'https://github.com/login/oauth/access_token',
+  revocationEndpoint: `https://github.com/settings/connections/applications/${githubClientId}`,
+};
 
 const StyledStripes = styled(Stripes);
 
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
+  const router = useRouter();
+
   const [fontsLoaded] = useFonts({
     Roboto_400Regular,
     Roboto_700Bold,
@@ -31,6 +51,33 @@ export default function App() {
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) await SplashScreen.hideAsync();
   }, [fontsLoaded]);
+
+  const [request, response, signInWithGithub] = useAuthRequest(
+    {
+      clientId: githubClientId,
+      scopes: ['identity'],
+      redirectUri: makeRedirectUri({
+        scheme: 'nlwspacetime',
+        preferLocalhost: true,
+      }),
+    },
+    discovery
+  );
+
+  async function handleGithubOAuthCode(code: string) {
+    const { data } = await api.post('/register', { code });
+    const token = data.token as string;
+
+    await SecureStore.setItemAsync('token', token);
+    router.push('/memories');
+  }
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+      handleGithubOAuthCode(code);
+    }
+  }, [response]);
 
   if (!fontsLoaded) return null;
 
@@ -60,7 +107,11 @@ export default function App() {
             className="rounded-full bg-green-500 px-5 py-2"
             activeOpacity={0.7}
           >
-            <Text className="font-alt text-sm uppercase text-black">
+            <Text
+              className="font-alt text-sm uppercase text-black"
+              disabled={!request}
+              onPress={() => signInWithGithub()}
+            >
               Começar a cadastrar
             </Text>
           </TouchableOpacity>
