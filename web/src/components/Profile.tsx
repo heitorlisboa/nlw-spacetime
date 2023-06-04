@@ -20,7 +20,7 @@ export const Profile = ({ name, avatarUrl }: ProfileProps) => (
       {name}
       <a
         className="block text-red-400 transition-colors hocus:text-red-300"
-        href="#"
+        href="/api/auth/logout"
       >
         Quero sair
       </a>
